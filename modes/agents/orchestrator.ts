@@ -1,12 +1,14 @@
 import { isCancel, text } from "@clack/prompts";
 import chalk from "chalk";
-import { defaultAgentConfig } from "./types";
+import { defaultAgentConfig } from "../types";
 import { ActionTracker } from "./action-tracker";
 import { ToolExecutor } from "./tool-executor";
 import { createAgentTools } from "./agent-tools";
 import { stepCountIs, ToolLoopAgent } from "ai";
-import { getAgentModel } from "../ai/ai.config";
-import { renderTerminalMarkdown } from "../tui/terminal-md";
+import { getAgentModel } from "../../ai/ai.config";
+import { renderTerminalMarkdown } from "../../tui/terminal-md";
+import { runApprovalFlow } from "./approved";
+import { createWebTools } from "../plan/web-tools";
 
 export async function runAgentMode() {
   console.log(chalk.bold("\n 🤖 Agent Mode"));
@@ -21,7 +23,7 @@ export async function runAgentMode() {
   const config = defaultAgentConfig();
   const tracker = new ActionTracker();
   const executor = new ToolExecutor(tracker, config);
-  const tools = createAgentTools(executor);
+  const tools = { ...createAgentTools(executor), ...createWebTools(tracker) };
 
   const agent = new ToolLoopAgent({
     model: getAgentModel(),
@@ -57,10 +59,9 @@ export async function runAgentMode() {
   if (errors.length) {
     console.log(chalk.red("\nSome operations reported errors:\n"));
     for (const e of errors) console.log(chalk.red(`  • ${e}`));
-  }
-  else{
-   console.log(chalk.green('\n✓ Applied.\n'));
+  } else {
+    console.log(chalk.green("\n✓ Applied.\n"));
   }
 
-  executor.clearStaging()
+  executor.clearStaging();
 }
